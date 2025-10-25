@@ -1,5 +1,6 @@
 // backend/src/app.js
 const express = require('express');
+const cors = require('cors');
 
 const authRoutes = require('./modules/auth/routes');
 const profileRoutes = require('./modules/profiles/routes');
