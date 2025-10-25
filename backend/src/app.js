@@ -9,6 +9,8 @@ const searchRoutes = require('./modules/search/routes');
 const bookingRoutes = require('./modules/bookings/routes');
 
 const app = express();
+
+app.use(cors());
 app.use(express.json());
 
 // Health check (used by FE to confirm BE is alive)
@@ -27,5 +29,9 @@ app.use('/bookings', bookingRoutes);
 app.use((req, res) => {
     res.status(404).json({ error: 'Not found', path: req.originalUrl });
 });
+
+// ADD THIS LINE - Error handler (must be last)
+app.use(require('./middleware/errorHandler'));
+
 
 module.exports = app;
