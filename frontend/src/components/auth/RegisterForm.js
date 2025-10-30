@@ -40,87 +40,106 @@ const RegisterForm = () => {
       setSuccess('Registration successful! Please check your email to verify your account.');
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
-      setError(error.message || 'Failed to register');
+      if (error.message === 'Not implemented') {
+        setError('Registration is currently unavailable while the backend is being set up. Please try again later.');
+      } else {
+        setError(error.message || 'Failed to register. Please try again.');
+      }
+      console.log('Registration error:', error); // For debugging
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center">Register</h2>
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-          <span className="block sm:inline">{error}</span>
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert">
-          <span className="block sm:inline">{success}</span>
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email (.edu required)
-          </label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-            Confirm Password
-          </label>
-          <input
-            type="password"
-            id="confirmPassword"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-            Role
-          </label>
-          <select
-            id="role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+    <div className="max-w-md mx-auto mt-8">
+      {/* LUTutor Banner */}
+      <div className="bg-[#8B2332] text-white py-4 px-8 rounded-t-lg text-center">
+        <h1 className="text-4xl font-bold tracking-wide">LUTutor</h1>
+        <p className="text-sm mt-1 text-gray-200">Connecting Students with Expert Tutors</p>
+      </div>
+      
+      <div className="p-8 bg-white rounded-b-lg shadow-xl border-l-4 border-r-4 border-b-4 border-[#8B2332]">
+        <h2 className="text-3xl font-bold mb-2 text-center text-[#8B2332]">Create Account</h2>
+        <p className="text-center text-gray-600 text-sm mb-6">Join as a student or tutor</p>
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded mb-6" role="alert">
+            <p className="font-medium">Error</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-50 border-l-4 border-green-500 text-green-800 px-4 py-3 rounded mb-6" role="alert">
+            <p className="font-medium">Success!</p>
+            <p className="text-sm">{success}</p>
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+              Email Address <span className="text-[#8B2332]">(.edu required)</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-md border border-gray-300 shadow-sm focus:border-[#8B2332] focus:ring-2 focus:ring-[#8B2332] focus:ring-opacity-50 transition duration-200"
+              placeholder="you@university.edu"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-md border border-gray-300 shadow-sm focus:border-[#8B2332] focus:ring-2 focus:ring-[#8B2332] focus:ring-opacity-50 transition duration-200"
+              placeholder="Create a strong password"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-md border border-gray-300 shadow-sm focus:border-[#8B2332] focus:ring-2 focus:ring-[#8B2332] focus:ring-opacity-50 transition duration-200"
+              placeholder="Re-enter your password"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">
+              I am a...
+            </label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-4 py-3 rounded-md border border-gray-300 shadow-sm focus:border-[#8B2332] focus:ring-2 focus:ring-[#8B2332] focus:ring-opacity-50 transition duration-200 bg-white"
+            >
+              <option value="student">Student</option>
+              <option value="tutor">Tutor</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base font-semibold text-white bg-[#8B2332] hover:bg-[#6D1A28] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8B2332] disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
           >
-            <option value="student">Student</option>
-            <option value="tutor">Tutor</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-        >
-          {loading ? 'Registering...' : 'Register'}
-        </button>
-      </form>
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
