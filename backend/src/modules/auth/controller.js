@@ -64,9 +64,9 @@ async function login(req, res, next) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        if (!user.is_verified) {
-            return res.status(403).json({ error: 'Please verify your email before logging in' });
-        }
+        // if (!user.is_verified) {
+        //     return res.status(403).json({ error: 'Please verify your email before logging in' });
+        // }
 
         const token = jwt.sign(
             { userId: user.user_id, email: user.email, role: user.role },
