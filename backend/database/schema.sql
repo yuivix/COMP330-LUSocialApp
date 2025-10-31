@@ -1,7 +1,7 @@
 -- LUTutor Database Schema
 
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   user_id SERIAL PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE users (
 );
 
 -- Profiles table
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   profile_id SERIAL PRIMARY KEY,
   user_id INTEGER UNIQUE NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   first_name VARCHAR(100),
@@ -25,22 +25,49 @@ CREATE TABLE profiles (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tutor listings table
-CREATE TABLE tutor_listings (
-  listing_id SERIAL PRIMARY KEY,
-  tutor_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  subject VARCHAR(100) NOT NULL,
-  hourly_rate DECIMAL(10,2) NOT NULL,
+-- ========== TUTOR LISTINGS ==========
+-- For fresh databases:
+CREATE TABLE IF NOT EXISTS tutor_listings (
+  listing_id   SERIAL PRIMARY KEY,
+  tutor_id     INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  subject      VARCHAR(100) NOT NULL,
+  hourly_rate  NUMERIC(10,2) NOT NULL,
   availability TEXT,
-  location VARCHAR(255),
-  description TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  location     VARCHAR(255),
+  description  TEXT,
+  is_active    BOOLEAN DEFAULT true,
+  created_at   TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- For existing databases: add new columns if missing
+ALTER TABLE tutor_listings
+  ADD COLUMN IF NOT EXISTS title TEXT,
+  ADD COLUMN IF NOT EXISTS course_code TEXT;
+
+-- Helpful indexes (safe to repeat)
+CREATE INDEX IF NOT EXISTS idx_tutor_listings_tutor_id ON tutor_listings(tutor_id);
+CREATE INDEX IF NOT EXISTS idx_tutor_listings_subject ON tutor_listings(subject);
+
+-- Optional: view that FE/queries can SELECT from with a stable shape
+CREATE OR REPLACE VIEW listings_view AS
+SELECT
+  listing_id,
+  tutor_id,
+  COALESCE(title, subject) AS title,
+  subject,
+  course_code,
+  hourly_rate,
+  description,
+  location,
+  is_active,
+  created_at,
+  updated_at
+FROM tutor_listings
+WHERE is_active = true;
+
 -- Bookings table
-CREATE TABLE bookings (
+CREATE TABLE IF NOT EXISTS bookings (
   booking_id SERIAL PRIMARY KEY,
   student_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   listing_id INTEGER NOT NULL REFERENCES tutor_listings(listing_id) ON DELETE CASCADE,
@@ -54,7 +81,7 @@ CREATE TABLE bookings (
 );
 
 -- Reviews table
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
   review_id SERIAL PRIMARY KEY,
   booking_id INTEGER UNIQUE NOT NULL REFERENCES bookings(booking_id) ON DELETE CASCADE,
   reviewer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -65,11 +92,11 @@ CREATE TABLE reviews (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_tutor_listings_tutor_id ON tutor_listings(tutor_id);
-CREATE INDEX idx_tutor_listings_subject ON tutor_listings(subject);
-CREATE INDEX idx_bookings_student_id ON bookings(student_id);
-CREATE INDEX idx_bookings_tutor_id ON bookings(tutor_id);
-CREATE INDEX idx_bookings_status ON bookings(status);
-CREATE INDEX idx_reviews_reviewee_id ON reviews(reviewee_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_tutor_listings_tutor_id ON tutor_listings(tutor_id);
+CREATE INDEX IF NOT EXISTS idx_tutor_listings_subject ON tutor_listings(subject);
+CREATE INDEX IF NOT EXISTS idx_bookings_student_id ON bookings(student_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_tutor_id ON bookings(tutor_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
+CREATE INDEX IF NOT EXISTS idx_reviews_reviewee_id ON reviews(reviewee_id);
