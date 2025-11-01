@@ -1,32 +1,30 @@
 // backend/src/middleware/auth.js
 const jwt = require('jsonwebtoken');
 
-// Middleware to verify JWT token
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+function requireAuth(req, res, next) {
+  try {
+    const auth = req.headers.authorization || '';
+    const [, token] = auth.split(' ');
+    if (!token) return res.status(401).json({ error: 'Missing bearer token' });
 
-    if (!token) {
-        return res.status(401).json({ error: 'Access token required' });
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (!payload || !payload.userId) {
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Invalid or expired token' });
-        }
-        req.user = user; // Attach user info to request
-        next();
-    });
+    req.user = { userId: payload.userId, role: payload.role };
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 }
 
-// Middleware to check if user has specific role
 function requireRole(role) {
-    return (req, res, next) => {
-        if (req.user.role !== role) {
-            return res.status(403).json({ error: 'Insufficient permissions' });
-        }
-        next();
-    };
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (req.user.role !== role) return res.status(403).json({ error: 'Forbidden' });
+    next();
+  };
 }
 
-module.exports = { authenticateToken, requireRole };
+module.exports = { requireAuth, requireRole };
