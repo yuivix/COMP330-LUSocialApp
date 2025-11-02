@@ -1,5 +1,9 @@
 // backend/src/modules/listings/routes.js
-const router = require('express').Router();
-router.post('/', (_req, res) => res.status(501).json({ error: 'Not implemented' }));
-router.get('/:id', (_req, res) => res.status(501).json({ error: 'Not implemented' }));
-module.exports = router;
+const r = require('express').Router();
+const c = require('./controller');
+const { requireAuth, requireRole } = require('../../middleware/auth');
+
+r.post('/', requireAuth, requireRole('tutor'), c.create); // tutor-only
+r.get('/', c.search);                                     // public
+
+module.exports = r;

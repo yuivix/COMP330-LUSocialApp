@@ -1,7 +1,7 @@
 // src/api.js
 
 // The backend base URL. Update this if your backend runs elsewhere.
-const API_BASE_URL = "http://localhost:4000";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 // Health check function — calls the backend /health route
 export async function checkHealth() {
