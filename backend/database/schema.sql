@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   tutor_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   session_date TIMESTAMP NOT NULL,
   duration_minutes INTEGER NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
+  status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED')),
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

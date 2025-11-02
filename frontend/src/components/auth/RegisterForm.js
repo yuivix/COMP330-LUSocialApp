@@ -102,6 +102,9 @@ const RegisterForm = () => {
               placeholder="Create a strong password"
               required
             />
+            <p className="mt-2 text-xs text-gray-600">
+              Password must be at least 8 characters and include uppercase, lowercase, and a number
+            </p>
           </div>
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
