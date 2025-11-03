@@ -16,9 +16,18 @@ const LoginForm = () => {
 
     try {
       setLoading(true);
-      const response = await login(email, password);
-      if (response && response.token) {
-        navigate('/dashboard');
+      const user = await login(email, password);
+      if (user && user.token) {
+        // Role-based navigation
+        if (user.role === 'tutor') {
+          navigate('/dashboard');
+        } else if (user.role === 'student') {
+          navigate('/dashboard');
+        } else {
+          // Fallback for any other roles or if role is not defined
+          navigate('/login');
+          setError('Login successful, but role is not recognized.');
+        }
       } else {
         setError('Invalid login response from server');
       }

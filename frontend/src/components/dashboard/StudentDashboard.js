@@ -1,17 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 // API base: set VITE_API_BASE (Vite) or REACT_APP_API_BASE (CRA) in your frontend .env
-const API_BASE =
-  import.meta?.env?.VITE_API_BASE ||
-  process.env.REACT_APP_API_BASE ||
-  "http://localhost:4000";
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
 
 // Shared fetch helper that auto-attaches the token
 async function apiFetch(path, { method = "GET", headers = {}, body } = {}) {
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("authToken");
+  const userStr = localStorage.getItem("user");
+  const token = userStr ? JSON.parse(userStr).token : null;
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
