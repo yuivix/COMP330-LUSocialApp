@@ -65,4 +65,38 @@ async function getBookingsByRole(userId, role) {
     return rows;
 }
 
-module.exports = { createBooking, getBookingsByRole };
+// Accept booking (tutor only)
+async function acceptBooking(bookingId, tutorId) {
+    // Verify tutor owns this booking
+    const checkQ = `
+        SELECT tutor_id FROM bookings WHERE booking_id = $1
+    `;
+    const { rows } = await pool.query(checkQ, [bookingId]);
+
+    if (!rows.length) {
+        const err = new Error('Booking not found');
+        err.code = '404';
+        throw err;
+    }
+
+    if (rows[0].tutor_id !== tutorId) {
+        const err = new Error('Not authorized to accept this booking');
+        err.code = '403';
+        throw err;
+    }
+
+    // Update status to accepted
+    const updateQ = `
+        UPDATE bookings 
+        SET status = 'accepted', updated_at = NOW()
+        WHERE booking_id = $1
+        RETURNING booking_id AS id, student_id, tutor_id, listing_id, 
+                  session_date AS start_time,
+                  (session_date + (duration_minutes || ' minute')::interval) AS end_time,
+                  status
+    `;
+    const { rows: updated } = await pool.query(updateQ, [bookingId]);
+    return updated[0];
+}
+
+module.exports = { createBooking, getBookingsByRole, acceptBooking };

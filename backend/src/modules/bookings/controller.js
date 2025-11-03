@@ -29,4 +29,24 @@ async function getBookingsByRole(req, res, next) {
     }
 }
 
-module.exports = { createBooking, getBookingsByRole };
+// Accept booking
+async function acceptBooking(req, res) {
+    try {
+        const { id } = req.params;
+        const tutorId = req.user.userId; // From JWT token
+
+        const booking = await service.acceptBooking(id, tutorId);
+        res.json(booking);
+    } catch (error) {
+        if (error.code === '404') {
+            return res.status(404).json({ error: error.message });
+        }
+        if (error.code === '403') {
+            return res.status(403).json({ error: error.message });
+        }
+        console.error('Accept booking error:', error);
+        res.status(500).json({ error: 'Failed to accept booking' });
+    }
+}
+
+module.exports = { createBooking, getBookingsByRole, acceptBooking };
