@@ -10,7 +10,19 @@ const bookingRoutes = require('./modules/bookings/routes');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: [
+        'https://lututor-app.vercel.app',
+        'https://lu-tutor-app.vercel.app',
+        'https://lututor-app.vercel.app',  // in case there's a typo in the URL
+        'http://localhost:3000',
+        'http://localhost:5173'  // in case you're using Vite
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Health check (used by FE to confirm BE is alive)
