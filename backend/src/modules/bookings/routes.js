@@ -1,6 +1,11 @@
-// backend/src/modules/bookings/routes.js
-const router = require('express').Router();
-router.post('/', (_req, res) => res.status(501).json({ error: 'Not implemented' }));
-router.get('/', (_req, res) => res.status(501).json({ error: 'Not implemented' }));
-router.patch('/:id', (_req, res) => res.status(501).json({ error: 'Not implemented' }));
+const express = require('express');
+const router = express.Router();
+const c = require('./controller');
+
+// Create booking
+router.post('/', c.createBooking);
+
+// Get bookings by role (student/tutor)
+router.get('/', c.getBookingsByRole);
+
 module.exports = router;
