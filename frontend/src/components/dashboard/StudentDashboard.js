@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 // API base: set VITE_API_BASE (Vite) or REACT_APP_API_BASE (CRA) in your frontend .env
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 // Shared fetch helper that auto-attaches the token
 async function apiFetch(path, { method = "GET", headers = {}, body } = {}) {
@@ -186,13 +186,12 @@ function StudentDashboard() {
                   </div>
                 </div>
                 <span
-                  className={`text-xs px-2 py-1 rounded ${
-                    (b.status || "").toUpperCase() === "ACCEPTED"
+                  className={`text-xs px-2 py-1 rounded ${(b.status || "").toUpperCase() === "ACCEPTED"
                       ? "bg-green-100 text-green-800"
                       : (b.status || "").toUpperCase() === "REQUESTED"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
                   title={`Status: ${b.status || "—"}`}
                 >
                   {b.status || "—"}
@@ -286,11 +285,10 @@ function StudentDashboard() {
       {banner && (
         <div
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 border ${
-            banner.type === "success"
+          className={`mt-4 rounded-md px-3 py-2 border ${banner.type === "success"
               ? "bg-green-50 border-green-200 text-green-900"
               : "bg-red-50 border-red-200 text-red-900"
-          }`}
+            }`}
         >
           {banner.text}
         </div>

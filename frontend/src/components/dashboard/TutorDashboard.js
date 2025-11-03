@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 // API base URL
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 // Shared fetch helper that auto-attaches the token
 async function apiFetch(path, { method = "GET", headers = {}, body } = {}) {
@@ -144,11 +144,10 @@ const TutorDashboard = () => {
       {banner && (
         <div
           role="status"
-          className={`mb-4 rounded-md px-3 py-2 border ${
-            banner.type === "success"
+          className={`mb-4 rounded-md px-3 py-2 border ${banner.type === "success"
               ? "bg-green-50 border-green-200 text-green-900"
               : "bg-red-50 border-red-200 text-red-900"
-          }`}
+            }`}
         >
           {banner.text}
         </div>
@@ -219,7 +218,7 @@ const TutorDashboard = () => {
                       : req.student_email || `Student ${req.student_id}`;
                   const listingTitle = req.listing_title || `Listing ${req.listing_id}`;
                   const status = (req.status || "pending").toUpperCase();
-                  
+
                   // Map database status to user-friendly labels
                   const statusLabel = status === "CONFIRMED" ? "ACCEPTED" : status === "PENDING" ? "REQUESTED" : status;
 
@@ -251,13 +250,12 @@ const TutorDashboard = () => {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            status === "CONFIRMED"
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status === "CONFIRMED"
                               ? "bg-green-100 text-green-800"
                               : status === "PENDING"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
                         >
                           {statusLabel}
                         </span>
@@ -353,11 +351,10 @@ const TutorDashboard = () => {
                 </div>
                 <div className="mt-3">
                   <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      listing.is_active
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${listing.is_active
                         ? "bg-green-100 text-green-800"
                         : "bg-gray-100 text-gray-800"
-                    }`}
+                      }`}
                   >
                     {listing.is_active ? "Active" : "Inactive"}
                   </span>
