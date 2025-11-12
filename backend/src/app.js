@@ -1,6 +1,7 @@
 // backend/src/app.js
 const express = require('express');
 const cors = require('cors');
+const pool = require('./db/connection'); // ✅ add this line
 
 const authRoutes = require('./modules/auth/routes');
 const profileRoutes = require('./modules/profiles/routes');
@@ -14,9 +15,9 @@ app.use(cors({
     origin: [
         'https://lututor-app.vercel.app',
         'https://lu-tutor-app.vercel.app',
-        'https://lututor-app.vercel.app',  // in case there's a typo in the URL
+        'https://lututor-app.vercel.app',  // redundant but safe
         'http://localhost:3000',
-        'http://localhost:5173'  // in case you're using Vite
+        'http://localhost:5173'  // if using Vite
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -25,12 +26,22 @@ app.use(cors({
 
 app.use(express.json());
 
-// Health check (used by FE to confirm BE is alive)
-app.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
+// ✅ Health check (supports both /health and /healthz)
+app.get(['/health', '/healthz'], async (req, res) => {
+    try {
+        const result = await pool.query('SELECT NOW() AS now');
+        res.json({ ok: true, time: result.rows[0].now });
+    } catch (err) {
+        console.error('Health check failed:', err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
-// Mount module routers (stubs for now)
+app.get('/', (_req, res) => {
+    res.json({ ok: true, service: 'LU-Tutor API', version: 'Cycle 2' });
+});
+
+// Mount module routers
 app.use('/auth', authRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/listings', listingRoutes);
@@ -42,8 +53,7 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Not found', path: req.originalUrl });
 });
 
-// ADD THIS LINE - Error handler (must be last)
+// Error handler (must be last)
 app.use(require('./middleware/errorHandler'));
-
 
 module.exports = app;
