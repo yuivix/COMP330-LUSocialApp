@@ -1,5 +1,8 @@
-// backend/src/modules/profiles/routes.js
-const router = require('express').Router();
-router.get('/:userId', (_req, res) => res.status(501).json({ error: 'Not implemented' }));
-router.put('/:userId', (_req, res) => res.status(501).json({ error: 'Not implemented' }));
+const express = require('express');
+const router = express.Router();
+const ctrl = require('./controller');
+
+// GET /profiles/:userId  (public read)
+router.get('/:userId', ctrl.getProfileById);
+
 module.exports = router;
