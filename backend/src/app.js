@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db/connection'); // ✅ add this line
+const reviewsRoutes = require('./modules/reviews/routes');
 
 const authRoutes = require('./modules/auth/routes');
 const profileRoutes = require('./modules/profiles/routes');
@@ -25,6 +26,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use('/reviews', reviewsRoutes);
 
 // ✅ Health check (supports both /health and /healthz)
 app.get(['/health', '/healthz'], async (req, res) => {
