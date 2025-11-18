@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 // API base: set VITE_API_BASE (Vite) or REACT_APP_API_BASE (CRA) in your frontend .env
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
@@ -40,11 +41,19 @@ function fmt(dtIso) {
 }
 
 function StudentDashboard() {
+  const navigate = useNavigate();
+  
   // --- search state ---
   const [query, setQuery] = useState("");
+  const [courseCode, setCourseCode] = useState("");
+  const [subject, setSubject] = useState("");
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadErr, setLoadErr] = useState(null);
+  
+  // --- pagination ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // --- upcoming bookings ---
   const [upcoming, setUpcoming] = useState([]);
@@ -66,15 +75,30 @@ function StudentDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function fetchListings(q) {
+  async function fetchListings(q = "", page = 1) {
     setLoading(true);
     setLoadErr(null);
     try {
-      const path = q?.trim()
-        ? `/listings?query=${encodeURIComponent(q.trim())}`
-        : `/listings`;
+      // Build query params
+      const params = new URLSearchParams();
+      if (q?.trim()) params.append('query', q.trim());
+      if (courseCode?.trim()) params.append('courseCode', courseCode.trim());
+      if (subject?.trim()) params.append('subject', subject.trim());
+      params.append('page', page.toString());
+      params.append('pageSize', '10');
+      
+      const path = `/listings${params.toString() ? '?' + params.toString() : ''}`;
       const data = await apiFetch(path);
+      
       setListings(Array.isArray(data) ? data : data?.results ?? []);
+      
+      // Update pagination if backend provides it
+      if (data?.totalPages) {
+        setTotalPages(data.totalPages);
+      }
+      if (data?.currentPage) {
+        setCurrentPage(data.currentPage);
+      }
     } catch (e) {
       setLoadErr(e.message || "Failed to load listings");
     } finally {
@@ -86,15 +110,11 @@ function StudentDashboard() {
     setUpLoading(true);
     setUpErr(null);
     try {
-      // Adjust the path/params to match your backend if different:
-      // e.g., /api/bookings?role=student or /bookings/mine
       const data = await apiFetch(`/bookings?role=student`);
       const arr = Array.isArray(data) ? data : data?.results ?? [];
-      // optional: filter out cancelled
-      const filtered = arr.filter(
-        (b) => (b.status || "").toUpperCase() !== "CANCELLED"
-      );
-      setUpcoming(filtered);
+      // Filter out cancelled bookings from the requests view
+      const nonCancelledBookings = arr.filter(booking => (booking.status || "").toUpperCase() !== "CANCELLED");
+      setUpcoming(nonCancelledBookings);
     } catch (e) {
       setUpErr(e.message || "Failed to load upcoming bookings");
     } finally {
@@ -102,9 +122,38 @@ function StudentDashboard() {
     }
   }
 
+  async function handleCancelBooking(bookingId) {
+    try {
+      await apiFetch(`/bookings/${bookingId}/cancel`, { method: 'PUT' });
+      showBanner('success', 'Booking cancelled successfully');
+      fetchUpcomingBookings(); // Refresh the list
+    } catch (error) {
+      showBanner('error', error.message || 'Failed to cancel booking');
+    }
+  }
+
   function onSubmitSearch(e) {
     e.preventDefault();
-    fetchListings(query);
+    setCurrentPage(1);
+    fetchListings(query, 1);
+  }
+  
+  function handlePageChange(newPage) {
+    setCurrentPage(newPage);
+    fetchListings(query, newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  
+  function handleClearFilters() {
+    setQuery("");
+    setCourseCode("");
+    setSubject("");
+    setCurrentPage(1);
+    fetchListings("", 1);
+  }
+  
+  function viewListingDetails(listingId) {
+    navigate(`/listings/${listingId}`);
   }
 
   function openRequest(raw) {
@@ -185,52 +234,100 @@ function StudentDashboard() {
                     {fmt(b.start_time)} → {fmt(b.end_time)}
                   </div>
                 </div>
-                <span
-                  className={`text-xs px-2 py-1 rounded ${(b.status || "").toUpperCase() === "ACCEPTED"
-                      ? "bg-green-100 text-green-800"
-                      : (b.status || "").toUpperCase() === "REQUESTED"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-gray-100 text-gray-700"
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${
+                      (b.status || "").toUpperCase() === "ACCEPTED" || (b.status || "").toUpperCase() === "CONFIRMED"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : (b.status || "").toUpperCase() === "REQUESTED" || (b.status || "").toUpperCase() === "PENDING"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : (b.status || "").toUpperCase() === "CANCELLED"
+                            ? "bg-gray-100 text-gray-700"
+                            : "bg-gray-100 text-gray-700"
                     }`}
-                  title={`Status: ${b.status || "—"}`}
-                >
-                  {b.status || "—"}
-                </span>
+                    title={`Status: ${b.status || "—"}`}
+                  >
+                    {b.status || "—"}
+                  </span>
+                  {(b.status || "").toUpperCase() !== "CANCELLED" && (
+                    <button
+                      onClick={() => handleCancelBooking(b.id)}
+                      className="text-sm text-red-600 hover:text-red-700 px-2 py-1 rounded border border-red-200 hover:border-red-300"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </section>
 
-      {/* Search Section */}
-      <form onSubmit={onSubmitSearch} className="flex gap-2 mb-4">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by subject, title, or tutor…"
-          className="flex-1 border rounded px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 text-white px-4 py-2 rounded"
-        >
-          {loading ? "Searching…" : "Search"}
-        </button>
+      {/* Search & Filter Section */}
+      <div className="mb-6 bg-white rounded-lg shadow p-4">
+        <h2 className="text-lg font-semibold mb-4">Search Listings</h2>
+        <form onSubmit={onSubmitSearch} className="space-y-4">
+          {/* Filter inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Course Code
+              </label>
+              <input
+                value={courseCode}
+                onChange={(e) => setCourseCode(e.target.value)}
+                placeholder="e.g., COMP330"
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332]"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subject
+              </label>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="e.g., Computer Science"
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332]"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                General Search
+              </label>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by keyword..."
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332]"
+              />
+            </div>
+          </div>
 
-        {/* Clear Search */}
-        <button
-          type="button"
-          onClick={() => {
-            setQuery("");
-            fetchListings("");
-          }}
-          disabled={loading}
-          className="border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2 rounded"
-        >
-          Clear
-        </button>
-      </form>
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-[#8B2332] hover:bg-[#6D1A28] focus:ring-[#8B2332] text-white px-6 py-2 rounded disabled:opacity-50 transition-colors"
+            >
+              {loading ? "Searching…" : "Search"}
+            </button>
+            
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              disabled={loading}
+              className="border border-gray-300 text-gray-700 hover:bg-gray-100 px-6 py-2 rounded disabled:opacity-50 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </form>
+      </div>
 
       {loadErr && <div className="text-red-600 mb-2">{loadErr}</div>}
 
@@ -265,19 +362,49 @@ function StudentDashboard() {
                   {item.hourly_rate != null && (
                     <div className="text-sm mt-1">${item.hourly_rate}/hr</div>
                   )}
-                  <div className="text-xs text-gray-500 mt-1">
-                    listing_id: <code>{item.id}</code>
-                  </div>
                 </div>
-                <button
-                  onClick={() => openRequest(item)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded"
-                >
-                  Request
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => viewListingDetails(item.id)}
+                    className="border border-[#8B2332] text-[#8B2332] hover:bg-[#8B2332] hover:text-white px-4 py-2 rounded transition-colors"
+                  >
+                    View Details
+                  </button>
+                  <button
+                    onClick={() => openRequest(item)}
+                    className="bg-[#8B2332] hover:bg-[#6D1A28] text-white px-4 py-2 rounded transition-colors"
+                  >
+                    Quick Request
+                  </button>
+                </div>
               </div>
             );
           })}
+        </div>
+      )}
+      
+      {/* Pagination */}
+      {hasResults && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1 || loading}
+            className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          
+          <span className="px-4 py-2 text-gray-700">
+            Page {currentPage} of {totalPages}
+          </span>
+          
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages || loading}
+            className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
         </div>
       )}
 
@@ -410,25 +537,29 @@ function RequestModal({ listing, onClose, onSuccess, onError }) {
 
         <form onSubmit={handleSubmit} className="grid gap-3 mt-4">
           <label className="grid gap-1">
-            <span className="text-sm">Start time</span>
+            <span className="text-sm font-medium text-gray-700">Start time</span>
             <input
               type="datetime-local"
               value={startLocal}
               onChange={(e) => setStartLocal(e.target.value)}
-              className="border rounded px-3 py-2"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
               required
+              min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
             />
+            <p className="mt-1 text-xs text-gray-500">Select a future start time</p>
           </label>
 
           <label className="grid gap-1">
-            <span className="text-sm">End time</span>
+            <span className="text-sm font-medium text-gray-700">End time</span>
             <input
               type="datetime-local"
               value={endLocal}
               onChange={(e) => setEndLocal(e.target.value)}
-              className="border rounded px-3 py-2"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
               required
+              min={startLocal || new Date(Date.now() + 60000).toISOString().slice(0, 16)}
             />
+            <p className="mt-1 text-xs text-gray-500">Select when the session should end</p>
           </label>
 
           <label className="grid gap-1">
@@ -455,7 +586,7 @@ function RequestModal({ listing, onClose, onSuccess, onError }) {
             <button
               type="submit"
               disabled={submitting}
-              className="px-3 py-2 rounded text-white bg-indigo-600 hover:bg-indigo-700"
+              className="px-3 py-2 rounded text-white bg-[#8B2332] hover:bg-[#6D1A28] transition-colors"
             >
               {submitting ? "Sending…" : "Send Request"}
             </button>

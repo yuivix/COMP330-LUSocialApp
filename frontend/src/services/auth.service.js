@@ -18,7 +18,13 @@ const authService = {
       });
       return response.data;
     } catch (error) {
+      console.error('Registration error details:', {
+        response: error.response?.data,
+        status: error.response?.status,
+        error: error.message
+      });
       const message =
+        error.response?.data?.error ||
         error.response?.data?.message ||
         error.response?.data ||
         error.message ||

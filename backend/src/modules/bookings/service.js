@@ -13,7 +13,7 @@ async function createBooking(studentId, listingId, start, end, note) {
     const conflictQ = `
     SELECT 1 FROM bookings
     WHERE tutor_id = $1
-      AND status != 'cancelled'
+      AND status != 'CANCELLED'
       AND (
         (session_date, session_date + (duration_minutes || ' minute')::interval)
         OVERLAPS ($2::timestamp, $3::timestamp)
@@ -27,8 +27,8 @@ async function createBooking(studentId, listingId, start, end, note) {
     }
 
     const insertQ = `
-    INSERT INTO bookings (student_id, tutor_id, listing_id, session_date, duration_minutes, notes)
-    VALUES ($1, $2, $3, $4, EXTRACT(EPOCH FROM ($5::timestamp - $4::timestamp))/60, $6)
+    INSERT INTO bookings (student_id, tutor_id, listing_id, session_date, duration_minutes, notes, status)
+    VALUES ($1, $2, $3, $4, EXTRACT(EPOCH FROM ($5::timestamp - $4::timestamp))/60, $6, 'PENDING')
     RETURNING booking_id AS id, student_id, tutor_id, listing_id, session_date, duration_minutes
   `;
     const { rows } = await pool.query(insertQ, [studentId, tutorId, listingId, start, end, note]);
@@ -51,12 +51,16 @@ async function getBookingsByRole(userId, role) {
     `;
     } else {
         q = `
-      SELECT b.booking_id AS id, b.listing_id, u.email AS student_email,
+      SELECT b.booking_id AS id, b.listing_id, 
+             u.email AS student_email,
+             t.subject AS listing_title,
+             t.course_code,
              b.session_date AS start_time,
              (b.session_date + (b.duration_minutes || ' minute')::interval) AS end_time,
-             b.status
+             b.status, b.notes
       FROM bookings b
       JOIN users u ON u.user_id = b.student_id
+      JOIN tutor_listings t ON t.listing_id = b.listing_id
       WHERE b.tutor_id = $1
       ORDER BY b.session_date ASC
     `;
@@ -85,10 +89,10 @@ async function acceptBooking(bookingId, tutorId) {
         throw err;
     }
 
-    // Update status to accepted
+    // Update status to CONFIRMED
     const updateQ = `
         UPDATE bookings 
-        SET status = 'accepted', updated_at = NOW()
+        SET status = 'CONFIRMED', updated_at = NOW()
         WHERE booking_id = $1
         RETURNING booking_id AS id, student_id, tutor_id, listing_id, 
                   session_date AS start_time,
@@ -99,4 +103,38 @@ async function acceptBooking(bookingId, tutorId) {
     return updated[0];
 }
 
-module.exports = { createBooking, getBookingsByRole, acceptBooking };
+// Cancel booking
+async function cancelBooking(bookingId, userId) {
+    // Verify user owns this booking (either as student or tutor)
+    const checkQ = `
+        SELECT student_id, tutor_id FROM bookings WHERE booking_id = $1
+    `;
+    const { rows } = await pool.query(checkQ, [bookingId]);
+
+    if (!rows.length) {
+        const err = new Error('Booking not found');
+        err.code = '404';
+        throw err;
+    }
+
+    if (rows[0].student_id !== userId && rows[0].tutor_id !== userId) {
+        const err = new Error('Not authorized to cancel this booking');
+        err.code = '403';
+        throw err;
+    }
+
+    // Update status to CANCELLED
+    const updateQ = `
+        UPDATE bookings 
+        SET status = 'CANCELLED', updated_at = NOW()
+        WHERE booking_id = $1
+        RETURNING booking_id AS id, student_id, tutor_id, listing_id, 
+                  session_date AS start_time,
+                  (session_date + (duration_minutes || ' minute')::interval) AS end_time,
+                  status
+    `;
+    const { rows: updated } = await pool.query(updateQ, [bookingId]);
+    return updated[0];
+}
+
+module.exports = { createBooking, getBookingsByRole, acceptBooking, cancelBooking };

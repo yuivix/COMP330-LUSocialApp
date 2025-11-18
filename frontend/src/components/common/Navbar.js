@@ -14,18 +14,18 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-gray-200 p-4 flex justify-between items-center">
-      <div className="font-bold text-xl">LUSocialApp</div>
+    <nav className="bg-[#8B2332] p-4 flex justify-between items-center">
+      <div className="font-bold text-xl text-white">LUTutor</div>
       <div className="space-x-4">
         <button
           onClick={handleProfileClick}
-          className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded"
+          className="px-3 py-1 bg-white hover:bg-gray-100 text-[#8B2332] rounded"
         >
           Profile
         </button>
         <button
           onClick={handleLogout}
-          className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
+          className="px-3 py-1 border border-white hover:bg-[#6D1A28] text-white rounded"
         >
           Logout
         </button>

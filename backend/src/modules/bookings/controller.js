@@ -35,7 +35,7 @@ async function acceptBooking(req, res) {
         const { id } = req.params;
         const tutorId = req.user.userId; // From JWT token
 
-        const booking = await service.acceptBooking(id, tutorId);
+        const booking = await svc.acceptBooking(id, tutorId);
         res.json(booking);
     } catch (error) {
         if (error.code === '404') {
@@ -49,4 +49,24 @@ async function acceptBooking(req, res) {
     }
 }
 
-module.exports = { createBooking, getBookingsByRole, acceptBooking };
+// Cancel booking
+async function cancelBooking(req, res) {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId; // From JWT token
+
+        const booking = await svc.cancelBooking(id, userId);
+        res.json(booking);
+    } catch (error) {
+        if (error.code === '404') {
+            return res.status(404).json({ error: error.message });
+        }
+        if (error.code === '403') {
+            return res.status(403).json({ error: error.message });
+        }
+        console.error('Cancel booking error:', error);
+        res.status(500).json({ error: 'Failed to cancel booking' });
+    }
+}
+
+module.exports = { createBooking, getBookingsByRole, acceptBooking, cancelBooking };
