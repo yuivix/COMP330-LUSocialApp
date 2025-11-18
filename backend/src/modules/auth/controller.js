@@ -8,41 +8,41 @@ const strongPw = p => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(p || '');
 
 async function register(req, res, next) {
     try {
+        console.log('Registration request received:', req.body);
         const { email, password, role } = req.body || {};
 
+        // Basic validation
         if (!email || !password || !role) {
-            return res.status(400).json({ error: 'Email, password, role required' });
+            console.log('Missing required fields');
+            return res.status(400).json({ error: 'Email, password, and role are required' });
         }
 
-        if (!isEduEmail(email)) {
-            return res.status(400).json({ error: 'Must use a .edu email address' });
-        }
-
-        if (!strongPw(password)) {
-            return res.status(400).json({ error: 'Password must have 8+ chars incl. upper, lower, number' });
-        }
-
-        if (!['student', 'tutor'].includes(role)) {
-            return res.status(400).json({ error: 'Role must be student or tutor' });
-        }
-
-        const existing = await svc.findUserByEmail(email);
-        if (existing) {
-            return res.status(409).json({ error: 'Email already registered' });
-        }
-
+        // Hash password and create verification token
         const passwordHash = await bcrypt.hash(password, 10);
         const verificationToken = crypto.randomBytes(24).toString('hex');
 
-        const user = await svc.createUser(email, passwordHash, role, verificationToken);
+        // Create user
+        try {
+            const user = await svc.createUser(email, passwordHash, role, verificationToken);
+            console.log('User created successfully:', { userId: user.user_id, email: user.email });
 
-        res.status(201).json({
-            message: 'Registered. Verify via token.',
-            userId: user.user_id,
-            devVerificationToken: verificationToken
-        });
-    } catch (e) {
-        next(e);
+            // Return success response
+            res.status(201).json({
+                message: 'Registration successful',
+                userId: user.user_id,
+                email: user.email,
+                role: user.role
+            });
+        } catch (error) {
+            console.error('Failed to create user:', error);
+            if (error.code === '23505') {
+                return res.status(409).json({ error: 'Email already registered' });
+            }
+            throw error;
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ error: 'Registration failed', details: error.message });
     }
 }
 

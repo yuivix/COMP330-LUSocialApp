@@ -1,22 +1,41 @@
 const pool = require('../../db/connection');
 
 async function createUser(email, passwordHash, role, verificationToken) {
-    const q = `
-    INSERT INTO users (email, password_hash, role, verification_token, is_verified)
-    VALUES ($1, $2, $3, $4, false)
-    RETURNING user_id, email, role, is_verified
-  `;
-    const { rows } = await pool.query(q, [email, passwordHash, role, verificationToken]);
-    const user = rows[0];
+    try {
+        // First check if the user already exists
+        const existingUser = await findUserByEmail(email);
+        if (existingUser) {
+            const error = new Error('Email already registered');
+            error.code = '23505';
+            throw error;
+        }
 
-    await pool.query(
-        `INSERT INTO profiles (user_id, created_at, updated_at)
-     VALUES ($1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-     ON CONFLICT (user_id) DO NOTHING`,
-        [user.user_id]
-    );
+        // Simple insert into users table
+        const q = `
+        INSERT INTO users (
+            email, 
+            password_hash, 
+            role, 
+            verification_token, 
+            is_verified,
+            created_at,
+            updated_at
+        )
+        VALUES ($1, $2, $3, $4, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING user_id, email, role, is_verified
+        `;
 
-    return user;
+        const { rows } = await pool.query(q, [email, passwordHash, role, verificationToken]);
+        console.log('User created successfully:', rows[0]);
+        return rows[0];
+    } catch (error) {
+        console.error('Error creating user:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail
+        });
+        throw error;
+    }
 }
 
 async function findUserByEmail(email) {

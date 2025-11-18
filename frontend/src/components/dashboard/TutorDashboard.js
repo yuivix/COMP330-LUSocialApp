@@ -63,9 +63,13 @@ const TutorDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch bookings where role=tutor and status=PENDING (uppercase to match database)
-      const data = await apiFetch("/bookings?role=tutor&status=PENDING");
-      setRequests(Array.isArray(data) ? data : []);
+      // Fetch bookings where role=tutor (all statuses, not just PENDING)
+      const data = await apiFetch("/bookings?role=tutor");
+      // Filter out cancelled bookings from requests view
+      const nonCancelledBookings = Array.isArray(data) 
+        ? data.filter(booking => (booking.status || "").toUpperCase() !== "CANCELLED")
+        : [];
+      setRequests(nonCancelledBookings);
     } catch (err) {
       console.error("Error fetching requests:", err);
       setError(err.message || "Failed to load requests");
@@ -95,11 +99,11 @@ const TutorDashboard = () => {
   // Accept a booking request
   async function handleAccept(bookingId) {
     try {
-      // Optimistically update the UI
+      // Optimistically update the UI to CONFIRMED
       setRequests((prev) =>
         prev.map((req) =>
           req.id === bookingId || req.booking_id === bookingId
-            ? { ...req, status: "confirmed" }
+            ? { ...req, status: "CONFIRMED" }
             : req
         )
       );
@@ -112,20 +116,32 @@ const TutorDashboard = () => {
       // Show success message
       showBanner("success", "Booking accepted successfully!");
 
-      // Remove from pending list after a short delay
-      setTimeout(() => {
-        setRequests((prev) =>
-          prev.filter(
-            (req) => req.id !== bookingId && req.booking_id !== bookingId
-          )
-        );
-      }, 1000);
+      // No need to remove from list - it will now show as CONFIRMED
     } catch (err) {
       console.error("Error accepting booking:", err);
       showBanner("error", err.message || "Failed to accept booking");
 
       // Revert optimistic update on error
       fetchRequests();
+    }
+  }
+
+  // Cancel a booking
+  async function handleCancel(bookingId) {
+    try {
+      // Call the backend
+      await apiFetch(`/bookings/${bookingId}/cancel`, {
+        method: "PUT",
+      });
+
+      // Show success message
+      showBanner("success", "Booking cancelled successfully!");
+
+      // Refresh the list
+      fetchRequests();
+    } catch (err) {
+      console.error("Error cancelling booking:", err);
+      showBanner("error", err.message || "Failed to cancel booking");
     }
   }
 
@@ -153,10 +169,10 @@ const TutorDashboard = () => {
         </div>
       )}
 
-      {/* Pending Booking Requests Section */}
+      {/* Booking Requests Section */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">Pending Booking Requests</h2>
+          <h2 className="text-xl font-semibold">Booking Requests</h2>
           <button
             onClick={fetchRequests}
             disabled={loading}
@@ -202,6 +218,9 @@ const TutorDashboard = () => {
                     Session Time
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Notes
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -216,7 +235,7 @@ const TutorDashboard = () => {
                     req.student_first_name && req.student_last_name
                       ? `${req.student_first_name} ${req.student_last_name}`
                       : req.student_email || `Student ${req.student_id}`;
-                  const listingTitle = req.listing_title || `Listing ${req.listing_id}`;
+                  const listingTitle = req.subject || req.listing_title || "Untitled Listing";
                   const status = (req.status || "pending").toUpperCase();
 
                   // Map database status to user-friendly labels
@@ -236,9 +255,9 @@ const TutorDashboard = () => {
                         <div className="font-medium text-gray-900">
                           {listingTitle}
                         </div>
-                        {req.subject && (
+                        {req.course_code && (
                           <div className="text-gray-500 text-xs">
-                            {req.subject}
+                            Course: {req.course_code}
                           </div>
                         )}
                       </td>
@@ -248,35 +267,53 @@ const TutorDashboard = () => {
                           to {fmt(req.end_time)}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 max-w-xs">
+                        {req.notes ? (
+                          <div className="text-sm italic">{req.notes}</div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No notes</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${status === "CONFIRMED"
-                              ? "bg-green-100 text-green-800"
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            status === "CONFIRMED"
+                              ? "bg-emerald-100 text-emerald-800"
                               : status === "PENDING"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-gray-100 text-gray-800"
-                            }`}
+                          }`}
                         >
                           {statusLabel}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {status === "PENDING" && (
-                          <button
-                            onClick={() => handleAccept(bookingId)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-                          >
-                            Accept
-                          </button>
-                        )}
-                        {status === "CONFIRMED" && (
-                          <button
-                            disabled
-                            className="bg-green-600 text-white px-3 py-1 rounded text-sm font-medium cursor-not-allowed opacity-90"
-                          >
-                            ✓ Accepted
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {status === "PENDING" && (
+                            <button
+                              onClick={() => handleAccept(bookingId)}
+                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                            >
+                              Accept
+                            </button>
+                          )}
+                          {status === "CONFIRMED" && (
+                            <button
+                              disabled
+                              className="bg-green-600 text-white px-3 py-1 rounded text-sm font-medium cursor-not-allowed opacity-90"
+                            >
+                              ✓ Accepted
+                            </button>
+                          )}
+                          {status !== "CANCELLED" && (
+                            <button
+                              onClick={() => handleCancel(bookingId)}
+                              className="text-red-600 hover:text-red-700 px-3 py-1 rounded text-sm font-medium border border-red-200 hover:border-red-300 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
