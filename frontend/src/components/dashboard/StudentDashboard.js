@@ -60,6 +60,19 @@ function StudentDashboard() {
   const [upLoading, setUpLoading] = useState(false);
   const [upErr, setUpErr] = useState(null);
 
+  // --- booking history ---
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyErr, setHistoryErr] = useState(null);
+
+  // --- review modal ---
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewErr, setReviewErr] = useState(null);
+
   // --- request modal + banner ---
   const [activeListing, setActiveListing] = useState(null);
   const [banner, setBanner] = useState(null); // { type: 'success'|'error', text: string }
@@ -72,8 +85,22 @@ function StudentDashboard() {
   useEffect(() => {
     fetchListings("");
     fetchUpcomingBookings();
+    fetchBookingHistory(); // <-- add this line
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  async function fetchBookingHistory() {
+    setHistoryLoading(true);
+    setHistoryErr(null);
+    try {
+      const data = await apiFetch("/bookings?as=student");
+      setHistory(Array.isArray(data) ? data : data?.results ?? []);
+    } catch (e) {
+      setHistoryErr(e.message || "Failed to load history");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
 
   async function fetchListings(q = "", page = 1) {
     setLoading(true);
@@ -176,6 +203,45 @@ function StudentDashboard() {
     setBanner({ type, text });
     setTimeout(() => setBanner(null), 3500);
   }
+
+  function handleLeaveReview(booking) {
+    setReviewBooking(booking);
+    setReviewRating(5);
+    setReviewComment("");
+    setReviewErr(null);
+    setReviewOpen(true);
+  }
+  
+  async function submitReview() {
+    if (!reviewBooking) return;
+  
+    setReviewSubmitting(true);
+    setReviewErr(null);
+  
+    try {
+      await apiFetch("/reviews", {
+        method: "POST",
+        body: {
+          bookingId: reviewBooking.id,
+          tutorId: reviewBooking.tutorId || reviewBooking.tutor?.id,
+          rating: reviewRating,
+          comment: reviewComment,
+        },
+      });
+      // success!
+      setReviewOpen(false);
+      setReviewBooking(null);
+  
+      // Refresh booking history to update UI
+      fetchBookingHistory();
+    } catch (e) {
+      setReviewErr(e.message || "Failed to submit review");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+  
+  
 
   // optimistic append helper
   function appendUpcoming(created) {
@@ -338,6 +404,42 @@ function StudentDashboard() {
         </div>
       )}
 
+      {/* Booking History */}
+      <section className="mb-6">
+        <h2 className="text-xl font-semibold">Booking History</h2>
+        <div className="mt-3 grid gap-2">
+          {history.map((b) => (
+            <div key={b.id} className="border rounded-md px-3 py-2 flex items-center justify-between">
+              <div className="text-sm">
+                <div className="font-medium">{b.tutorName}</div>
+                <div className="text-gray-700">{fmt(b.date)}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-xs px-2 py-1 rounded ${
+                    b.status === "ACCEPTED" ? "bg-emerald-100 text-emerald-800"
+                    : b.status === "REQUESTED" ? "bg-yellow-100 text-yellow-800"
+                    : b.status === "COMPLETED" ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {b.status}
+                </span>
+                {b.status === "COMPLETED" && (
+                  <button
+                    onClick={() => handleLeaveReview(b)}
+                    className="text-sm text-[#8B2332] hover:text-[#6D1A28] px-2 py-1 rounded border border-[#8B2332]"
+                >
+                    Leave Review
+                  </button>
+                
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {hasResults && (
         <div className="grid gap-3">
           {listings.map((raw) => {
@@ -438,6 +540,90 @@ function StudentDashboard() {
           }}
         />
       )}
+      {reviewOpen && reviewBooking && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 bg-black/40 grid place-items-center z-50"
+          onClick={() => setReviewOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl p-5 w-[min(520px,92vw)] shadow-xl"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold m-0">Leave Review</h3>
+              <button
+                onClick={() => setReviewOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-2 text-sm text-gray-700">
+              <div>
+                <strong>Tutor:</strong> {reviewBooking.tutorName}
+              </div>
+              <div className="text-xs text-gray-500">
+                Booking ID: <code>{reviewBooking.id}</code>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitReview();
+              }}
+              className="grid gap-3 mt-4"
+            >
+              <label className="grid gap-1">
+                <span className="text-sm font-medium text-gray-700">Rating (1–5)</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={reviewRating}
+                  onChange={(e) => setReviewRating(Number(e.target.value))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </label>
+
+              <label className="grid gap-1">
+                <span className="text-sm font-medium text-gray-700">Comment</span>
+                <textarea
+                  rows={3}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  placeholder="Leave your feedback…"
+                />
+              </label>
+
+              {reviewErr && <div className="text-red-600">{reviewErr}</div>}
+
+              <div className="flex justify-end gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => setReviewOpen(false)}
+                  className="px-3 py-2 rounded border"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={reviewSubmitting}
+                  className="px-3 py-2 rounded text-white bg-[#8B2332] hover:bg-[#6D1A28] transition-colors"
+                >
+                  {reviewSubmitting ? "Submitting…" : "Submit Review"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
