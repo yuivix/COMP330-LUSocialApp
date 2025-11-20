@@ -145,6 +145,19 @@ const TutorDashboard = () => {
     }
   }
 
+  // Mark booking as completed
+  async function handleMarkCompleted(bookingId) {
+    try {
+      await apiFetch(`/bookings/${bookingId}/complete`, { method: "POST" });
+      showBanner("success", "Booking marked as completed!");
+      fetchRequests(); // refresh the tutor bookings list
+    } catch (err) {
+      console.error("Error marking booking completed:", err);
+      showBanner("error", err.message || "Failed to mark booking completed");
+    }
+  }
+
+
   function showBanner(type, text) {
     setBanner({ type, text });
     setTimeout(() => setBanner(null), 3500);
@@ -269,19 +282,23 @@ const TutorDashboard = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 max-w-xs">
                         {req.notes ? (
-                          <div className="text-sm italic">{req.notes}</div>
+                          <div className="h-20 overflow-y-auto break-words text-sm italic">
+                            {req.notes}
+                          </div>
                         ) : (
                           <span className="text-gray-400 text-xs">No notes</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            status === "CONFIRMED"
+                          className={`text-xs px-2 py-1 rounded ${
+                            statusLabel === "ACCEPTED" || statusLabel === "CONFIRMED"
                               ? "bg-emerald-100 text-emerald-800"
-                              : status === "PENDING"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-gray-100 text-gray-800"
+                              : statusLabel === "REQUESTED" || statusLabel === "PENDING"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : statusLabel === "COMPLETED"
+                              ? "bg-gray-100 text-gray-700"
+                              : "bg-gray-100 text-gray-700"
                           }`}
                         >
                           {statusLabel}
@@ -299,10 +316,10 @@ const TutorDashboard = () => {
                           )}
                           {status === "CONFIRMED" && (
                             <button
-                              disabled
-                              className="bg-green-600 text-white px-3 py-1 rounded text-sm font-medium cursor-not-allowed opacity-90"
+                              onClick={() => handleMarkCompleted(bookingId)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
                             >
-                              ✓ Accepted
+                              Complete
                             </button>
                           )}
                           {status !== "CANCELLED" && (
