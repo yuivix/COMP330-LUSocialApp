@@ -101,6 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_bookings_tutor_id ON bookings(tutor_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_reviews_reviewee_id ON reviews(reviewee_id);
 
+-- 
 CREATE TABLE IF NOT EXISTS profiles (
   user_id INTEGER PRIMARY KEY REFERENCES users(user_id),
   first_name TEXT NOT NULL,
