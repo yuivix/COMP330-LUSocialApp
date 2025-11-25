@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('./controller');
+const controller = require('./controller');
+const { requireAuth } = require('../auth/middleware');
 
-// GET /reviews?tutorId=123&page=1&pageSize=10
-router.get('/', ctrl.listForTutor);
+router.get('/', requireAuth, controller.listForTutor);
+router.post('/', requireAuth, controller.createReview);
 
 module.exports = router;
