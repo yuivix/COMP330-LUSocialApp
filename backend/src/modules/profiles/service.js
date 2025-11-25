@@ -1,26 +1,46 @@
-const pool = require("../../db/connection");
+const pool = require('../../db/connection');
 
-async function getProfileById(userId) {
-  const sql = `
-    SELECT
-      p.profile_id AS "profileId",
-      p.user_id AS "userId",
-      p.first_name AS "firstName",
-      p.last_name AS "lastName",
-      p.bio AS "bio",
-      p.profile_picture_url AS "avatarUrl",
-      p.phone AS "phone",
-      u.email AS "email",
-      u.role AS "role",
-      u.is_verified AS "verified"
-    FROM profiles p
-    JOIN users u ON u.user_id = p.user_id
-    WHERE p.user_id = $1
-    LIMIT 1;
-  `;
-
-  const r = await pool.query(sql, [userId]);
-  return r.rows[0] || null;
+async function createListing(tutorId, data) {
+    const sql = `
+        INSERT INTO tutor_listings
+        (tutor_id, title, subject, course_code, hourly_rate, description, location, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+            RETURNING listing_id, tutor_id, title, subject, course_code, hourly_rate, description, location, created_at, updated_at
+    `;
+    const vals = [
+        tutorId,
+        String(data.title).trim(),
+        String(data.subject).trim(),
+        data.course_code || null,
+        Number(data.hourly_rate),
+        data.description || null,
+        data.location || null,
+    ];
+    const { rows } = await pool.query(sql, vals);
+    return rows[0];
 }
 
-module.exports = { getProfileById };
+async function searchListings(queryText) {
+    const base = `
+    SELECT listing_id, tutor_id, title, subject, course_code, hourly_rate, description, location, updated_at
+    FROM tutor_listings
+    WHERE is_active = true
+  `;
+    if (!queryText || !String(queryText).trim()) {
+        const sql = `${base} ORDER BY updated_at DESC LIMIT 25`;
+        return (await pool.query(sql)).rows;
+    }
+    const like = `%${String(queryText).trim()}%`;
+    const sql = `
+    ${base}
+      AND (
+        title ILIKE $1 OR subject ILIKE $1 OR description ILIKE $1 OR location ILIKE $1
+      )
+    ORDER BY updated_at DESC
+    LIMIT 25
+  `;
+    const { rows } = await pool.query(sql, [like]);
+    return rows;
+}
+
+module.exports = { createListing, searchListings };
