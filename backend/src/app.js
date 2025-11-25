@@ -20,6 +20,7 @@ app.use(
       "https://lu-tutor-app.vercel.app",
       "https://lututor-app.vercel.app", // redundant but safe
       "http://localhost:3000",
+      "http://localhost:3002",
       "http://localhost:5173", // if using Vite
     ],
     credentials: true,

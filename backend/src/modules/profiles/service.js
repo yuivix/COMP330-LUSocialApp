@@ -1,46 +1,96 @@
+// backend/src/modules/profiles/service.js
 const pool = require('../../db/connection');
 
-async function createListing(tutorId, data) {
-    const sql = `
-        INSERT INTO tutor_listings
-        (tutor_id, title, subject, course_code, hourly_rate, description, location, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-            RETURNING listing_id, tutor_id, title, subject, course_code, hourly_rate, description, location, created_at, updated_at
-    `;
-    const vals = [
-        tutorId,
-        String(data.title).trim(),
-        String(data.subject).trim(),
-        data.course_code || null,
-        Number(data.hourly_rate),
-        data.description || null,
-        data.location || null,
-    ];
-    const { rows } = await pool.query(sql, vals);
-    return rows[0];
+/**
+ * Shared SELECT for a user+profile by userId.
+ * Used by both /profiles/:userId and /profiles/me
+ */
+async function getProfileByUserId(userId) {
+  const { rows } = await pool.query(
+    `
+    SELECT
+      u.user_id      AS "userId",
+      u.email        AS "email",
+      u.role         AS "role",
+      u.is_verified  AS "verified",
+      p.first_name   AS "firstName",
+      p.last_name    AS "lastName",
+      p.university   AS "university",
+      p.major        AS "major",
+      p.year         AS "year",
+      p.bio          AS "bio",
+      p.avatar_url   AS "avatarUrl"
+    FROM users u
+    LEFT JOIN profiles p ON p.user_id = u.user_id
+    WHERE u.user_id = $1
+    `,
+    [userId]
+  );
+
+  return rows[0] || null;
 }
 
-async function searchListings(queryText) {
-    const base = `
-    SELECT listing_id, tutor_id, title, subject, course_code, hourly_rate, description, location, updated_at
-    FROM tutor_listings
-    WHERE is_active = true
-  `;
-    if (!queryText || !String(queryText).trim()) {
-        const sql = `${base} ORDER BY updated_at DESC LIMIT 25`;
-        return (await pool.query(sql)).rows;
-    }
-    const like = `%${String(queryText).trim()}%`;
-    const sql = `
-    ${base}
-      AND (
-        title ILIKE $1 OR subject ILIKE $1 OR description ILIKE $1 OR location ILIKE $1
-      )
-    ORDER BY updated_at DESC
-    LIMIT 25
-  `;
-    const { rows } = await pool.query(sql, [like]);
-    return rows;
+/**
+ * For /profiles/:userId – controller calls svc.getProfileById(...)
+ * Just reuses the same query.
+ */
+async function getProfileById(userId) {
+  return getProfileByUserId(userId);
 }
 
-module.exports = { createListing, searchListings };
+/**
+ * Upsert profile row for a given user.
+ * Used by /profiles/me PATCH.
+ */
+async function upsertProfileForUser(userId, fields) {
+  const {
+    firstName = null,
+    lastName = null,
+    university = null,
+    major = null,
+    year = null,
+    bio = null,
+    avatarUrl = null,
+  } = fields || {};
+
+  const { rows } = await pool.query(
+    `
+    INSERT INTO profiles (
+      user_id, first_name, last_name, university, major, year, bio, avatar_url, updated_at
+    )
+    VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, NOW()
+    )
+    ON CONFLICT (user_id) DO UPDATE SET
+      first_name = EXCLUDED.first_name,
+      last_name  = EXCLUDED.last_name,
+      university = EXCLUDED.university,
+      major      = EXCLUDED.major,
+      year       = EXCLUDED.year,
+      bio        = EXCLUDED.bio,
+      avatar_url = EXCLUDED.avatar_url,
+      updated_at = NOW()
+    RETURNING user_id
+    `,
+    [userId, firstName, lastName, university, major, year, bio, avatarUrl]
+  );
+
+  return rows[0];
+}
+
+/**
+ * Wrapper used by controller.updateMyProfile – returns full profile shape
+ */
+async function updateProfileForUser(userId, fields) {
+  await upsertProfileForUser(userId, fields);
+  // Return the full joined profile so FE gets fresh data
+  return getProfileByUserId(userId);
+}
+
+module.exports = {
+  getProfileByUserId,
+  getProfileById,
+  upsertProfileForUser,
+  updateProfileForUser,
+  // keep any other exports you already had here
+};

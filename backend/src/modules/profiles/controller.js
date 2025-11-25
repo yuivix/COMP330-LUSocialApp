@@ -1,9 +1,18 @@
+// backend/src/modules/profiles/controller.js
 const svc = require('./service');
 
-async function getMyProfile(req, res, next) {
+/**
+ * PUBLIC PROFILE - GET /profiles/:userId
+ */
+async function getProfileById(req, res, next) {
     try {
-        const userId = req.user.userId;
-        const profile = await svc.getProfileByUserId(userId);
+        const { userId } = req.params;
+
+        if (!/^\d+$/.test(userId)) {
+            return res.status(400).json({ error: 'Invalid userId' });
+        }
+
+        const profile = await svc.getProfileById(Number(userId));
 
         if (!profile) {
             return res.status(404).json({ error: 'Profile not found' });
@@ -15,42 +24,47 @@ async function getMyProfile(req, res, next) {
     }
 }
 
-async function updateMyProfile(req, res, next) {
+
+/**
+ * MY PROFILE - GET /profiles/me
+ */
+async function getMyProfile(req, res, next) {
     try {
         const userId = req.user.userId;
-        const {
-            firstName,
-            lastName,
-            university,
-            major,
-            year,
-            bio,
-            avatarUrl,
-        } = req.body || {};
+        const profile = await svc.getProfileByUserId(userId);
 
-        if (bio && bio.length > 1000) {
-            return res.status(400).json({ error: 'Bio is too long' });
+        if (!profile) {
+            return res.status(404).json({ error: "Profile not found" });
         }
 
-        await svc.upsertProfileForUser(userId, {
-            firstName,
-            lastName,
-            university,
-            major,
-            year,
-            bio,
-            avatarUrl,
-        });
-
-        const full = await svc.getProfileByUserId(userId);
-        res.json(full);
+        res.json(profile);
     } catch (err) {
         next(err);
     }
 }
 
+
+/**
+ * MY PROFILE UPDATE - PATCH /profiles/me
+ */
+async function updateMyProfile(req, res, next) {
+    try {
+        const userId = req.user.userId;
+
+        const updated = await svc.updateProfileForUser(userId, req.body);
+
+        res.json(updated);
+    } catch (err) {
+        next(err);
+    }
+}
+
+
+/**
+ * EXPORT ALL CONTROLLERS
+ */
 module.exports = {
-    // existing exports like getProfileById...
+    getProfileById,
     getMyProfile,
     updateMyProfile,
 };

@@ -1,18 +1,22 @@
+// backend/src/modules/bookings/routes.js
 const express = require('express');
 const router = express.Router();
-const c = require('./controller');
-const { requireAuth, requireRole } = require('../../middleware/auth');
+const controller = require('./controller');
+const { requireAuth } = require('../auth/middleware');
 
-// Create booking (student only)
-router.post('/', requireAuth, requireRole('student'), c.createBooking);
+// Create a booking
+router.post('/', requireAuth, controller.createBooking);
 
-// Get bookings by role
-router.get('/', requireAuth, c.getBookingsByRole);
+// Get bookings (student/tutor based on ?role=...)
+router.get('/', requireAuth, controller.getBookingsByRole);
 
-// Accept booking (tutor only)
-router.put('/:id/accept', requireAuth, requireRole('tutor'), c.acceptBooking);
+// Accept a booking (tutor only)
+router.post('/:id/accept', requireAuth, controller.acceptBooking);
 
-// Cancel booking (both student and tutor)
-router.put('/:id/cancel', requireAuth, c.cancelBooking);
+// Cancel a booking
+router.post('/:id/cancel', requireAuth, controller.cancelBooking);
+
+// ✅ NEW: Mark booking as COMPLETED (tutor only)
+router.post('/:id/complete', requireAuth, controller.markBookingComplete);
 
 module.exports = router;
