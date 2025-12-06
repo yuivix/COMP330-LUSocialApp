@@ -110,7 +110,7 @@ const TutorDashboard = () => {
 
       // Call the backend
       await apiFetch(`/bookings/${bookingId}/accept`, {
-        method: "PUT",
+        method: "POST",
       });
 
       // Show success message
@@ -131,7 +131,7 @@ const TutorDashboard = () => {
     try {
       // Call the backend
       await apiFetch(`/bookings/${bookingId}/cancel`, {
-        method: "PUT",
+        method: "POST",
       });
 
       // Show success message
