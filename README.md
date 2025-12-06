@@ -1,218 +1,288 @@
 # COMP330-LUSocialApp
 
-# LU Tutor – Cycle 2 Final Delivery
+# 📘 LU Tutor – Cycle 2 Final Delivery
 
 LU Tutor is a full-stack tutoring platform prototype built for Loyola University Chicago.  
-It allows **students** to find tutors, request and manage sessions, and leave reviews, while **tutors** can post listings, manage bookings, and see feedback.
+Students can find tutors, request sessions, and leave reviews. Tutors can publish listings, manage bookings, and receive feedback.
 
-This README reflects the **final Cycle 2 version**.
+This README provides **full instructions so you can run both backend and frontend locally**.
 
 ---
 
 ## 🚀 Tech Stack
 
-### Frontend
-- **React** (Create React App)
+### **Frontend**
+- React (Create React App)
 - Runs locally on **http://localhost:3000**
 
-### Backend
-- **Node.js + Express**
-- REST API running on **http://localhost:4000**
-cd 
-### Database
-- **PostgreSQL**
-- Local instance (schema provided in `backend/db/schema.sql`)
+### **Backend**
+- Node.js + Express REST API
+- Runs locally on **http://localhost:4000**
 
-### Authentication
-- **JWT (JSON Web Tokens)**
-- Role-based: `student` and `tutor`
-- Tokens issued on login and used on protected endpoints
+### **Database**
+- PostgreSQL (local instance)
+- Schema located at:  
+  `backend/db/schema.sql`
+
+### **Authentication**
+- JWT (JSON Web Tokens)
+- Role-based: **student** | **tutor**
+- Required for protected routes
 
 ---
 
-## ✅ Features – Cycle 2
+## ✅ Cycle 2 Features Delivered
 
 ### 1. Authentication & Authorization
-- Register with `.edu` email and password
-- Login returns JWT token
-- Role-based behavior for:
-  - Student dashboard
-  - Tutor dashboard
-- Protected routes on frontend and backend using JWT
+- Register with `.edu` emails
+- Login returns a JWT token
+- Protected routes for student/tutor dashboards
 
-### 2. Profiles (NEW in Cycle 2)
+### 2. Profiles (NEW)
 
 #### Backend
-- `GET /profiles/me` – returns the logged-in user's profile
-- `PATCH /profiles/me` – updates profile fields
-- `GET /profiles/:userId` – public tutor profile
+- `GET /profiles/me` — fetch logged-in user profile  
+- `PATCH /profiles/me` — update profile  
+- `GET /profiles/:userId` — public tutor profile  
 
 #### Frontend
-- **My Profile** page:
-  - View and edit `firstName`, `lastName`, `university`, `major`, `year`, `bio`, `avatarUrl`
-- **Tutor Profile View**:
-  - From a listing, users can jump to the tutor's profile
-  - Shows name, university, bio, and reviews
+- My Profile page (edit & save profile)
+- Tutor Profile page (from listings)
 
 ### 3. Listings
-- Tutors can create and manage listings (subject, course code, hourly rate, description)
-- Students can search listings with:
-  - Text search
-  - Filters (subject, course code)
-  - Pagination
+- Tutor creates listings (subject, course code, rate, description)
+- Students search listings with filters & pagination
 
-#### Key Endpoints
-- `GET /listings`
-- `POST /listings`
-- `PUT /listings/:id`
-- `PATCH /listings/:id/active`
-- `GET /search?subject=...&courseCode=...&page=...`
+**Endpoints:**  
+- `GET /listings`  
+- `POST /listings`  
+- `PUT /listings/:id`  
+- `GET /search?...`
 
-### 4. Bookings Workflow (Extended in Cycle 2)
+### 4. Bookings Workflow (Updated)
 
-#### Student
-- Request sessions from a listing
-- View bookings by status:
-  - `REQUESTED`
-  - `ACCEPTED`
-  - `COMPLETED`
-  - `CANCELLED`
+#### Students can:
+- Request tutoring sessions  
+- View bookings by status: REQUESTED, ACCEPTED, COMPLETED, CANCELLED  
 
-#### Tutor
-- View incoming requests
-- Accept or cancel requests
-- Mark accepted bookings as **COMPLETED**
+#### Tutors can:
+- Accept booking requests  
+- Cancel sessions  
+- Mark completed sessions  
 
-#### Key Endpoints
-- `POST /bookings` – create booking
-- `GET /bookings?role=student` – bookings as a student
-- `GET /bookings?role=tutor` – bookings as a tutor
-- `POST /bookings/:id/accept`
-- `POST /bookings/:id/cancel`
-- `POST /bookings/:id/complete`
+**Endpoints:**  
+- `POST /bookings`  
+- `POST /bookings/:id/accept`  
+- `POST /bookings/:id/cancel`  
+- `POST /bookings/:id/complete`  
 
-### 5. Reviews (NEW in Cycle 2)
+### 5. Reviews (NEW)
 
 #### Rules
-- Only the **student on a completed booking** can leave a review
-- Exactly **one review per booking**
-- Rating is between **1–5**, with optional text comment
+- Student can review only after completed booking  
+- One review per booking  
+- Rating 1–5 with optional comment  
 
-#### Backend
-- `POST /reviews`
-  - Body: `{ "bookingId", "rating", "comment" }`
-- `GET /reviews?tutorId=...&page=...`
-  - Returns:
-    - `averageRating`
-    - `total`
-    - `page`, `pageSize`
-    - `reviews[]` (rating, comment, createdAt, reviewer name)
+**Endpoints:**  
+- `POST /reviews`  
+- `GET /reviews?tutorId=...`
 
 #### Frontend
-- "Leave Review" form available for completed bookings
-- Reviews visible on tutor-related views
-- Displays average rating and list of recent reviews
+- Leave review form  
+- Display average rating  
+- Show review list  
 
-### 6. Notifications (Logging Adapter)
-- Simple email "adapter" implemented as logging only:
-  - `sendEmail(to, templateId, params)`
-- Called when:
-  - Booking is requested
-  - Booking is accepted
-- Output appears in backend logs as `[EMAIL] { ... }`
-- No real email provider or paid service required
+### 6. Notifications (Mock Only)
+Backend includes a simple log-based notification system:
+
+```js
+sendEmail(to, templateId, params)
+```
+
+Logs to console — no real emails required.
 
 ---
 
-## 🧰 Local Setup & Running Instructions
-
-These are the steps your professor can follow to run LU Tutor locally.
+## 🧰 HOW TO RUN LU-TUTOR LOCALLY
 
 ### 1️⃣ Clone the Repository
+
+Open terminal:
+
 ```bash
 git clone https://github.com/yuivix/COMP330-LUSocialApp.git
 cd COMP330-LUSocialApp
 ```
 
-### 2️⃣ Setup PostgreSQL Database
+### 2️⃣ Install & Prepare PostgreSQL
 
-Open psql and run:
+#### Step 1: Open PostgreSQL
+
+**Mac/Linux:**
+```bash
+psql -U postgres
+```
+
+**Windows:**  
+Open SQL Shell.
+
+#### Step 2: Create the database
+
+Inside psql:
+
 ```sql
 CREATE DATABASE lututor;
-\c lututor;
+\q
 ```
 
-Then, run the schema file found at:
-```
-backend/db/schema.sql
+#### Step 3: Load the schema
+
+From the project root:
+
+```bash
+psql -U postgres -d lututor -f backend/db/schema.sql
 ```
 
-(e.g., copy-paste its contents into psql or use `\i path/to/schema.sql`)
+This creates all tables:
+- users
+- profiles
+- tutor_listings
+- bookings
+- reviews
 
-### 3️⃣ Backend Setup (Port 4000)
+### 3️⃣ Backend Setup (Runs on port 4000)
+
+Open a new terminal:
+
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file in `backend/`:
+Create `backend/.env`:
 ```env
-DATABASE_URL=postgresql://<YOUR_DB_USER>@localhost/lututor
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/lututor
 JWT_SECRET=supersecret123
 PORT=4000
 ```
 
-Start the backend:
+> **Note:** Replace `YOUR_PASSWORD` with your PostgreSQL password. If you don't have a password, remove `:YOUR_PASSWORD` from the URL.
+
+Start backend:
+
 ```bash
 npm run dev
 ```
 
-You should see logs like:
+You should see:
+
 ```
 ✅ PostgreSQL: pool connected
-✅ Database connected at: ...
-✅ Users table accessible, count: ...
 🚀 API running on http://localhost:4000
 ```
 
-Health check:
+**Test backend:**  
+Visit in browser:
 
-Browser or Bruno/Postman: http://localhost:4000/health
+```
+http://localhost:4000/health
+```
 
-### 4️⃣ Frontend Setup (Port 3000)
+You should see:
 
-In a new terminal:
+```json
+{ "ok": true, "time": "..." }
+```
+
+### 4️⃣ Frontend Setup (Runs on port 3000)
+
+Open a second terminal:
+
 ```bash
 cd frontend
 npm install
 ```
 
-Create a `.env` file in `frontend/`:
+Create `frontend/.env`:
+
 ```env
 REACT_APP_API_URL=http://localhost:4000
 ```
 
-Start the frontend:
+Start frontend:
+
 ```bash
 npm start
 ```
 
-Visit:
+Then visit:
+
 ```
 http://localhost:3000
 ```
 
-You should be able to:
+---
 
-- Register a `.edu` user
-- Login
-- Edit profile
-- View/create listings
-- Request and update bookings
-- Leave a review on a completed booking
+## You should be able to:
+
+1. **Register a new user** (requires `.edu` domain)  
+   ex: `professor@luc.edu`
+
+2. **Login**  
+   JWT token is automatically used by frontend.
+
+3. **Edit Profile**
+   - Name
+   - Bio
+   - Major
+   - Avatar URL
+   - etc.
+
+4. **As a Tutor**
+   - Create a listing
+   - Accept or cancel bookings
+   - Mark a completed booking
+
+5. **As a Student**
+   - Search for listings
+   - Request a booking
+   - Leave a review after completion
+
+---
+
+## 📁 Project Structure
+
+```
+COMP330-LUSocialApp/
+├── backend/
+│   ├── src/modules/
+│   │   ├── auth/
+│   │   ├── profiles/
+│   │   ├── listings/
+│   │   ├── bookings/
+│   │   ├── reviews/
+│   │   └── search/
+│   ├── db/schema.sql
+│   ├── app.js
+│   └── index.js
+└── frontend/
+    ├── src/
+    ├── package.json
+    └── .env
+```
+
+---
+
+## 📎 Live/Remote Deployment (For History)
+
+**Frontend (Vercel):**  
+https://lu-tutor-app.vercel.app
+
+**Backend (Render):**  
+https://comp330-lusocialapp.onrender.com
 
 ---
 
 ## 📝 License
 
-This project is for educational purposes as part of COMP330 at Loyola University Chicago.
+This project is created for educational purposes under the COMP330 course at Loyola University Chicago.
