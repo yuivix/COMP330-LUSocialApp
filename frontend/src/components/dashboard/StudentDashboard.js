@@ -151,7 +151,7 @@ function StudentDashboard() {
 
   async function handleCancelBooking(bookingId) {
     try {
-      await apiFetch(`/bookings/${bookingId}/cancel`, { method: 'PUT' });
+      await apiFetch(`/bookings/${bookingId}/cancel`, { method: 'POST' });
       showBanner('success', 'Booking cancelled successfully');
       fetchUpcomingBookings(); // Refresh the list
     } catch (error) {

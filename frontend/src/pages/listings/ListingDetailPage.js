@@ -92,9 +92,27 @@ const ListingDetailPage = () => {
 
     const start = new Date(startTime);
     const end = new Date(endTime);
+    const now = new Date();
+
+    // Validate start time is in the future
+    if (start <= now) {
+      setBookingError("Start time must be in the future");
+      return;
+    }
 
     if (end <= start) {
       setBookingError("End time must be after start time");
+      return;
+    }
+
+    // Validate session duration (min 30 mins, max 4 hours)
+    const durationHours = (end - start) / (1000 * 60 * 60);
+    if (durationHours < 0.5) {
+      setBookingError("Session must be at least 30 minutes");
+      return;
+    }
+    if (durationHours > 4) {
+      setBookingError("Session cannot exceed 4 hours");
       return;
     }
 
@@ -119,7 +137,16 @@ const ListingDetailPage = () => {
       // Hide success message after 5 seconds
       setTimeout(() => setBookingSuccess(false), 5000);
     } catch (err) {
-      setBookingError(err.message || "Failed to create booking");
+      // Handle specific error cases
+      if (err.status === 401) {
+        setBookingError("Please log in to book a session");
+      } else if (err.status === 400) {
+        setBookingError(err.message || "Invalid booking details. Please check your inputs.");
+      } else if (err.status === 409) {
+        setBookingError("This time slot conflicts with an existing booking");
+      } else {
+        setBookingError(err.message || "Failed to create booking. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -208,21 +235,21 @@ const ListingDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-100 py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
-          className="mb-6 flex items-center text-[#8B2332] hover:text-[#6D1A28]"
+          className="mb-6 flex items-center text-[#8B2332] hover:text-[#6D1A28] font-medium transition-colors"
         >
-          <span className="mr-2">←</span> Back
+          <span className="mr-2">←</span> Back to Listings
         </button>
 
         {/* Success Message */}
         {bookingSuccess && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-            <h3 className="text-green-800 font-semibold">
-              Booking Request Sent!
+          <div className="mb-6 bg-green-50 border-l-4 border-green-500 rounded-lg p-4 shadow-sm">
+            <h3 className="text-green-800 font-semibold flex items-center">
+              <span className="mr-2">✓</span> Booking Request Sent!
             </h3>
             <p className="text-green-700 text-sm mt-1">
               Your booking request has been submitted. The tutor will review it
@@ -232,64 +259,66 @@ const ListingDetailPage = () => {
         )}
 
         {/* Listing Details Card */}
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-xl shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#8B2332] to-[#6D1A28] p-6 text-white">
+          <div className="bg-gradient-to-r from-[#8B2332] to-[#6D1A28] p-8 text-white">
             <h1 className="text-3xl font-bold mb-2">
               {listing.title || listing.subject}
             </h1>
             {listing.course_code && (
-              <p className="text-red-100 text-lg">{listing.course_code}</p>
+              <span className="inline-block bg-white/20 text-white px-3 py-1 rounded-full text-sm font-medium">
+                {listing.course_code}
+              </span>
             )}
           </div>
 
-          {/* Content */}
-          <div className="p-6">
+            {/* Content */}
+          <div className="p-8">
             {/* Tutor Info */}
-            <div className="mb-6 pb-6 border-b">
-              <h2 className="text-xl font-semibold mb-3 text-gray-800">
+            <div className="mb-8 pb-8 border-b border-gray-200">
+              <h2 className="text-lg font-semibold mb-4 text-gray-800 uppercase tracking-wide">
                 Tutor Information
               </h2>
-              <div className="space-y-2">
-                <p className="text-gray-700">
-                  <span className="font-medium">Tutor:</span>{" "}
-                  {listing.tutor_label || listing.tutor || "Not specified"}
+              <div className="space-y-3">
+                <p className="text-gray-700 text-lg">
+                  <span className="font-medium text-gray-600">Tutor:</span>{" "}
+                  <span className="font-semibold">{listing.tutor_label || listing.tutor || "Not specified"}</span>
                 </p>
-                <p className="text-gray-700">
-                  <span className="font-medium">Hourly Rate:</span>{" "}
-                  <span className="text-2xl font-bold text-[#8B2332]">
+                <div className="bg-gray-50 rounded-lg p-4 inline-block">
+                  <span className="text-sm text-gray-500 block mb-1">Hourly Rate</span>
+                  <span className="text-3xl font-bold text-[#8B2332]">
                     ${listing.hourly_rate}
                   </span>
-                  <span className="text-gray-500">/hour</span>
-                </p>
+                  <span className="text-gray-500 text-lg">/hour</span>
+                </div>
 
                 {/* TASK B: View Tutor Profile button */}
-                <button
-                  type="button"
-                  onClick={handleViewTutorProfile}
-                  className="mt-3 inline-flex items-center px-4 py-2 bg-gray-100 text-sm font-medium text-[#8B2332] rounded hover:bg-gray-200"
-                >
-                  View Tutor Profile
-                </button>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleViewTutorProfile}
+                    className="inline-flex items-center px-5 py-2.5 bg-gray-100 text-sm font-semibold text-[#8B2332] rounded-lg hover:bg-gray-200 transition-colors border border-gray-200"
+                  >
+                    View Tutor Profile
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Subject & Course */}
-            <div className="mb-6 pb-6 border-b">
-              <h2 className="text-xl font-semibold mb-3 text-gray-800">
+            </div>            {/* Subject & Course */}
+            <div className="mb-8 pb-8 border-b border-gray-200">
+              <h2 className="text-lg font-semibold mb-4 text-gray-800 uppercase tracking-wide">
                 Course Details
               </h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Subject</p>
-                  <p className="text-lg font-medium text-gray-800">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Subject</p>
+                  <p className="text-xl font-semibold text-gray-800">
                     {listing.subject}
                   </p>
                 </div>
                 {listing.course_code && (
-                  <div>
-                    <p className="text-sm text-gray-500">Course Code</p>
-                    <p className="text-lg font-medium text-gray-800">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Course Code</p>
+                    <p className="text-xl font-semibold text-gray-800">
                       {listing.course_code}
                     </p>
                   </div>
@@ -299,29 +328,29 @@ const ListingDetailPage = () => {
 
             {/* Description */}
             {listing.description && (
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-3 text-gray-800">
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800 uppercase tracking-wide">
                   Description
                 </h2>
-                <p className="text-gray-700 leading-relaxed">
+                <p className="text-gray-700 leading-relaxed text-base">
                   {listing.description}
                 </p>
               </div>
             )}
 
             {/* Book Session Button + Form */}
-            <div className="mt-8">
+            <div className="mt-10 pt-8 border-t border-gray-200">
               {!showBookingForm ? (
                 <button
                   onClick={() => setShowBookingForm(true)}
-                  className="w-full md:w-auto px-8 py-3 bg-[#8B2332] hover:bg-[#6D1A28] text-white font-semibold rounded-lg shadow-md transition-colors"
+                  className="w-full md:w-auto px-10 py-4 bg-[#8B2332] hover:bg-[#6D1A28] text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   Book Session
                 </button>
               ) : (
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-8 shadow-inner">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-gray-800">
                       Book a Session
                     </h3>
                     <button
@@ -329,28 +358,28 @@ const ListingDetailPage = () => {
                         setShowBookingForm(false);
                         setBookingError(null);
                       }}
-                      className="text-gray-500 hover:text-gray-700"
+                      className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
                     >
                       ✕
                     </button>
                   </div>
 
                   {bookingError && (
-                    <div className="mb-4 bg-red-50 border border-red-200 rounded p-3">
+                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
                       <p className="text-red-800 text-sm">{bookingError}</p>
                     </div>
                   )}
 
-                  <form onSubmit={handleBookingSubmit} className="space-y-4">
+                  <form onSubmit={handleBookingSubmit} className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Start Time
                       </label>
                       <input
                         type="datetime-local"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332] transition-shadow"
                         required
                         min={new Date(Date.now() + 60000)
                           .toISOString()
@@ -359,14 +388,14 @@ const ListingDetailPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         End Time
                       </label>
                       <input
                         type="datetime-local"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332] transition-shadow"
                         required
                         min={
                           startTime ||
@@ -378,23 +407,23 @@ const ListingDetailPage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Notes (Optional)
                       </label>
                       <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         rows={3}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#8B2332] focus:border-[#8B2332] transition-shadow"
                         placeholder="Any specific topics or questions you want to cover?"
                       />
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-4 pt-2">
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="flex-1 px-6 py-2 bg-[#8B2332] hover:bg-[#6D1A28] text-white font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-6 py-3 bg-[#8B2332] hover:bg-[#6D1A28] text-white font-semibold rounded-lg shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                       >
                         {submitting
                           ? "Submitting..."
@@ -406,7 +435,7 @@ const ListingDetailPage = () => {
                           setShowBookingForm(false);
                           setBookingError(null);
                         }}
-                        className="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+                        className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
                       >
                         Cancel
                       </button>
@@ -421,16 +450,16 @@ const ListingDetailPage = () => {
 
       {/* === Tutor Profile Modal (TASK B) === */}
       {showTutorProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 relative">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 relative">
             <button
               onClick={closeTutorProfile}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"
             >
               ✕
             </button>
 
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">
               Tutor Profile
             </h2>
 
@@ -439,50 +468,61 @@ const ListingDetailPage = () => {
             )}
 
             {tutorError && !tutorLoading && (
-              <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                 <p className="text-red-800 text-sm">{tutorError}</p>
               </div>
             )}
 
             {tutorProfile && !tutorLoading && (
-              <div className="space-y-3">
-                <p className="text-gray-800">
-                  <span className="font-medium">Name:</span>{" "}
-                  {tutorProfile.firstName} {tutorProfile.lastName}
-                </p>
-                {tutorProfile.university && (
-                  <p className="text-gray-800">
-                    <span className="font-medium">University:</span>{" "}
-                    {tutorProfile.university}
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Name</p>
+                  <p className="text-lg font-semibold text-gray-800">
+                    {tutorProfile.firstName} {tutorProfile.lastName}
                   </p>
+                </div>
+                {tutorProfile.university && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">University</p>
+                    <p className="text-lg font-medium text-gray-800">
+                      {tutorProfile.university}
+                    </p>
+                  </div>
                 )}
                 {tutorProfile.major && (
-                  <p className="text-gray-800">
-                    <span className="font-medium">Major:</span>{" "}
-                    {tutorProfile.major}
-                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Major</p>
+                    <p className="text-lg font-medium text-gray-800">
+                      {tutorProfile.major}
+                    </p>
+                  </div>
                 )}
                 {tutorProfile.year && (
-                  <p className="text-gray-800">
-                    <span className="font-medium">Year:</span>{" "}
-                    {tutorProfile.year}
-                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Year</p>
+                    <p className="text-lg font-medium text-gray-800">
+                      {tutorProfile.year}
+                    </p>
+                  </div>
                 )}
                 {tutorProfile.bio && (
-                  <p className="text-gray-800">
-                    <span className="font-medium">Bio:</span> {tutorProfile.bio}
-                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Bio</p>
+                    <p className="text-gray-700 leading-relaxed">{tutorProfile.bio}</p>
+                  </div>
                 )}
 
                 {/* Optional rating if backend adds it later */}
                 {typeof tutorProfile.avg_rating !== "undefined" && (
-                  <p className="text-gray-800">
-                    <span className="font-medium">Average Rating:</span>{" "}
-                    {Number(tutorProfile.avg_rating).toFixed(1)} / 5
-                    {tutorProfile.review_count
-                      ? ` (${tutorProfile.review_count} reviews)`
-                      : ""}
-                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Average Rating</p>
+                    <p className="text-lg font-semibold text-gray-800">
+                      {Number(tutorProfile.avg_rating).toFixed(1)} / 5
+                      {tutorProfile.review_count
+                        ? ` (${tutorProfile.review_count} reviews)`
+                        : ""}
+                    </p>
+                  </div>
                 )}
               </div>
             )}
