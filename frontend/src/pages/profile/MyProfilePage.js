@@ -79,20 +79,24 @@ export default function MyProfilePage() {
     }
 
     try {
-      // ✅ This matches your backend: GET /profiles/:userId
       const data = await apiFetch(`/profiles/${userId}`);
+      console.log("Loaded profile:", data); // optional
 
       if (data) {
+        const fullName =
+          data.name ||
+          (data.firstName && data.lastName
+            ? `${data.firstName} ${data.lastName}`
+            : data.firstName || data.lastName || "");
+
         setForm({
-          name: data.firstName || data.name || "",
+          name: fullName || "",
           university: data.university || "",
           major: data.major || "",
           year: data.year || "",
           avatarUrl: data.avatarUrl || "",
           bio: data.bio || "",
         });
-      } else {
-        // No profile row yet → keep defaults
       }
     } catch (e) {
       console.error("Failed to load profile:", e);
@@ -108,10 +112,24 @@ export default function MyProfilePage() {
     setError("");
 
     try {
-      // ✅ Per assignment: front-end sends PATCH /profiles/me
+      // Split the name into first + last
+      const trimmed = (form.name || "").trim();
+      const [firstName, ...rest] = trimmed.split(" ");
+      const lastName = rest.join(" ") || null;
+
+      const payload = {
+        firstName: firstName || null,
+        lastName,
+        university: form.university || null,
+        major: form.major || null,
+        year: form.year || null,
+        avatarUrl: form.avatarUrl || null,
+        bio: form.bio || null,
+      };
+
       await apiFetch("/profiles/me", {
         method: "PATCH",
-        body: form,
+        body: payload,
       });
 
       setEditing(false);
