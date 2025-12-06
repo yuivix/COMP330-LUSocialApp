@@ -1,18 +1,14 @@
 // frontend/src/services/api.js
 
-// Base URL for your backend API.
-// For local dev your backend is on http://localhost:4000.
-// In production you can set REACT_APP_API_URL to the Render URL.
+// Local backend for development.
+// You can override this with REACT_APP_API_URL in .env if needed.
 const API_BASE_URL =
   process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 /**
- * Generic API fetch wrapper.
- * Adds JSON headers + Authorization token automatically.
+ * Backend fetch helper
  */
 export async function apiFetch(path, options = {}) {
-  const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
-
   const token = localStorage.getItem("token");
 
   const headers = {
@@ -24,30 +20,26 @@ export async function apiFetch(path, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
   });
 
+  let data = null;
+  try {
+    data = await response.json();
+  } catch (e) { }
+
   if (!response.ok) {
-    let errorData;
-    try {
-      errorData = await response.json();
-    } catch {
-      errorData = { error: response.statusText };
-    }
-    throw new Error(errorData.error || "Request failed");
+    const error = new Error(data?.error || "Request failed");
+    error.status = response.status;
+    error.payload = data;
+    throw error;
   }
 
-  // 204 No Content
-  if (response.status === 204) return null;
-
-  return response.json();
+  return data;
 }
 
-/**
- * Backend health check – used on the login screen
- */
-export function checkHealth() {
+export async function checkHealth() {
   return apiFetch("/health");
 }

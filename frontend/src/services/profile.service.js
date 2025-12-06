@@ -18,10 +18,7 @@ export async function getProfileById(userId) {
 }
 
 // Optional – if your backend has a reviews summary endpoint
-export async function getTutorReviewsSummary(userId) {
-  try {
-    return await apiFetch(`/reviews/summary?userId=${userId}`);
-  } catch {
-    return null;
-  }
+export async function getTutorReviewsSummary(tutorId) {
+  return apiFetch(`/reviews?tutorId=${tutorId}`);
 }
+

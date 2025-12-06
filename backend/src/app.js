@@ -2,37 +2,46 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const pool = require("./db/connection"); // ✅ add this line
-const reviewsRoutes = require("./modules/reviews/routes");
+const pool = require("./db/connection");
 
+// Import routes
 const authRoutes = require("./modules/auth/routes");
 const profileRoutes = require("./modules/profiles/routes");
 const listingRoutes = require("./modules/listings/routes");
 const searchRoutes = require("./modules/search/routes");
 const bookingRoutes = require("./modules/bookings/routes");
+const reviewsRoutes = require("./modules/reviews/routes");
 
 const app = express();
 
+/* ------------------------------------------------------
+   CORS — SIMPLE, PROFESSOR-FRIENDLY, LOCAL + PROD SAFE
+------------------------------------------------------- */
 app.use(
   cors({
     origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:5173",
       "https://lututor-app.vercel.app",
       "https://lu-tutor-app.vercel.app",
-      "https://lututor-app.vercel.app", // redundant but safe
-      "http://localhost:3000",
-      "http://localhost:3002",
-      "http://localhost:5173", // if using Vite
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-app.use(express.json());
-app.use("/reviews", reviewsRoutes);
+// Handle preflight OPTIONS requests (required)
+app.options("*", cors());
 
-// ✅ Health check (supports both /health and /healthz)
+/* ------------------------------------------------------
+   Middleware
+------------------------------------------------------- */
+app.use(express.json());
+
+/* ------------------------------------------------------
+   Health Check — required for Render + professor
+------------------------------------------------------- */
 app.get(["/health", "/healthz"], async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW() AS now");
@@ -43,23 +52,33 @@ app.get(["/health", "/healthz"], async (req, res) => {
   }
 });
 
+/* ------------------------------------------------------
+   Root endpoint
+------------------------------------------------------- */
 app.get("/", (_req, res) => {
   res.json({ ok: true, service: "LU-Tutor API", version: "Cycle 2" });
 });
 
-// Mount module routers
+/* ------------------------------------------------------
+   Mount all module routers
+------------------------------------------------------- */
 app.use("/auth", authRoutes);
 app.use("/profiles", profileRoutes);
 app.use("/listings", listingRoutes);
 app.use("/search", searchRoutes);
 app.use("/bookings", bookingRoutes);
+app.use("/reviews", reviewsRoutes);
 
-// Basic 404
+/* ------------------------------------------------------
+   404 Handler
+------------------------------------------------------- */
 app.use((req, res) => {
   res.status(404).json({ error: "Not found", path: req.originalUrl });
 });
 
-// Error handler (must be last)
+/* ------------------------------------------------------
+   Global Error Handler (MUST BE LAST)
+------------------------------------------------------- */
 app.use(require("./middleware/errorHandler"));
 
 module.exports = app;
